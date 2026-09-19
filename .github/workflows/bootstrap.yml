@@ -23,7 +23,6 @@ jobs:
           base64 -d /tmp/roidmi-source.b64 > /tmp/roidmi-source.tgz
           tar -xzf /tmp/roidmi-source.tgz -C .
           rm -rf bootstrap
-          rm -f .github/workflows/bootstrap.yml
           python tools/build_release.py
 
       - name: Commit repository and update channel
