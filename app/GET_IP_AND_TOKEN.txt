@@ -1,0 +1,23 @@
+КАК ПОЛУЧИТЬ IP И TOKEN НА WINDOWS
+
+1. Откройте:
+   https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor/releases/latest
+
+2. Скачайте Windows-версию Xiaomi Cloud Tokens Extractor.
+
+3. Войдите в Xiaomi-аккаунт.
+   Безопаснее использовать QR-вход, если он доступен в выбранной версии.
+
+4. Выберите регион Xiaomi Home. Если не знаете регион, проверьте все регионы.
+
+5. Найдите:
+   Model: roidmi.vacuum.v60
+
+6. Скопируйте:
+   IP - например 192.168.1.54
+   Token - 32 шестнадцатеричных символа.
+
+7. Вставьте IP и token в ROIDMI EVE Plus Control.
+
+ВАЖНО:
+Token даёт локальный доступ к пылесосу. Не публикуйте его.

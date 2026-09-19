@@ -1,0 +1,21 @@
+{
+  "model": "ROIDMI EVE Plus / SDJ01RM",
+  "battery_mah": 5200,
+  "rated_power_w": 50,
+  "max_suction_pa": 2700,
+  "dust_box_ml": 300,
+  "water_tank_nominal_ml": 250,
+  "water_tank_manual_variant_ml": 220,
+  "cleaning_time_min": 250,
+  "station_bag_l": 3,
+  "station_power_w": 850,
+  "obstacle_cm": 2.0,
+  "water_model_ml_per_m2": {
+    "level_0": 0.0,
+    "level_1": 1.0,
+    "level_2": 2.1,
+    "level_3": 3.2,
+    "level_4": 4.2
+  },
+  "water_model_note": "Level 1 derives from 250 ml / 250 m² published coverage. Level 4 uses a field measurement of about 40% of 250 ml over 24 m². Intermediate levels are interpolated estimates."
+}

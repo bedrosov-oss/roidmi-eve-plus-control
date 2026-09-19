@@ -1,0 +1,7 @@
+﻿v21.5
+- GitHub update channel
+- automatic checks every 12 hours
+- version comparison
+- SHA256 verification
+- safe external updater into new folder
+- automatic restart after update

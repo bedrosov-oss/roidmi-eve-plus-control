@@ -1,0 +1,9 @@
+{
+  "ip": "192.168.1.100",
+  "token": "",
+  "xiaomi_username": "",
+  "xiaomi_password": "",
+  "xiaomi_region": "auto",
+  "auto_connect": false,
+  "live_autosave": true
+}

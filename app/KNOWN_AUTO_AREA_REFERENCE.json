@@ -1,0 +1,27 @@
+[
+  {
+    "CleanCount": 1,
+    "id": 5,
+    "name": "Room5"
+  },
+  {
+    "CleanCount": 1,
+    "id": 1,
+    "name": "Room1"
+  },
+  {
+    "CleanCount": 1,
+    "id": 3,
+    "name": "Room3"
+  },
+  {
+    "CleanCount": 1,
+    "id": 4,
+    "name": "Room4"
+  },
+  {
+    "CleanCount": 1,
+    "id": 2,
+    "name": "Room2"
+  }
+]

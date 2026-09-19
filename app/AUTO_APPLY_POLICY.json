@@ -1,0 +1,42 @@
+{
+  "behavior": "auto_apply_on_start",
+  "only_write_differences": true,
+  "backup_before_changes": true,
+  "save_verified_config_to": "LAST_APPLIED_OPTIMIZATION.json",
+  "global_profile": {
+    "fanspeed_mode": 3,
+    "sweep_type": 2,
+    "water_level": 2,
+    "path_mode": 0,
+    "work_station_freq": 1,
+    "volume": 23,
+    "auto_boost": true,
+    "double_clean": false,
+    "lidar_collision": true,
+    "dnd": "22:00-08:00"
+  },
+  "schedule": {
+    "Mon_Wed_Fri_Sun_11_00": "All rooms, fan 3, sweep+mop, water 2",
+    "Tue_Thu_Sat_11_00": "Kitchen 1 + Corridor 3, fan 4, sweep+mop, water 2"
+  },
+  "room_order": {
+    "persistent_profile": true,
+    "device_write": false,
+    "reason": "-704220035 action parameter error; internal area-order JSON schema not documented"
+  },
+  "live_autosave": {
+    "enabled": true,
+    "general_settings_debounce_ms": 650,
+    "schedule_debounce_ms": 700,
+    "dnd_debounce_ms": 900,
+    "room_order_debounce_ms": 1100,
+    "write_only_differences": true,
+    "read_back_after_write": true,
+    "backup_before_write": true,
+    "log": "autosave.log"
+  },
+  "startup_profile_source": "USER_PROFILE.json",
+  "hardcoded_optimized_profile_on_start": false,
+  "persistent_autosave": true,
+  "user_changes_survive_restart": true
+}

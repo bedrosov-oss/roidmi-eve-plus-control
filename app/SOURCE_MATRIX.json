@@ -1,0 +1,87 @@
+{
+  "model": "roidmi.vacuum.v60",
+  "edition": "v15 GitHub Direct Edition",
+  "repositories": [
+    {
+      "repo": "poisondima/Roidmi-EVE-Plus",
+      "commit": "68b8d2c380d382b8206b1e9f78779a122aa97c43",
+      "used_for": [
+        "exact selective-room params format",
+        "Russian control semantics",
+        "water/station/boost/lidar labels"
+      ]
+    },
+    {
+      "repo": "al-one/hass-xiaomi-miot",
+      "commit": "50f9fc31ca760615864336bc0e79eaea789d7324",
+      "used_for": [
+        "local/cloud MIoT strategy",
+        "v60 action set",
+        "Xiaomi cloud behavior reference"
+      ]
+    },
+    {
+      "repo": "PiotrMachowski/Home-Assistant-custom-components-Xiaomi-Cloud-Map-Extractor",
+      "commit": "62285a755a13a9e1178a8e76f75830bce320eea5",
+      "used_for": [
+        "ROIDMI map format",
+        "cloud map retrieval model"
+      ]
+    },
+    {
+      "repo": "rytilahti/python-miio",
+      "commit": "9a00e0888ef85f8d8d84888cabd9e46d1b0a18df",
+      "used_for": [
+        "direct LAN MIoT control",
+        "v60 property/action mapping",
+        "timing/DND/property semantics"
+      ]
+    },
+    {
+      "repo": "XiaoMi/ha_xiaomi_home",
+      "commit": "1a5f890cbe08d14ec7252196bd925a57090e8774",
+      "used_for": [
+        "current official MIoT spec handling",
+        "v60 spec compatibility reference"
+      ]
+    },
+    {
+      "repo": "openhab/openhab-addons",
+      "commit": "23cb920aeed6fd92a7b391d6d23d7150d0860b66",
+      "used_for": [
+        "comprehensive v60 MIoT property database",
+        "path type",
+        "map properties",
+        "actions cross-check"
+      ]
+    },
+    {
+      "repo": "alex2844/node-xmihome",
+      "commit": "fe5d9f59a3cb3745c44dbf065db1cbce8cb2c75c",
+      "used_for": [
+        "v60 direct properties/actions",
+        "mapId and segment extraction",
+        "SVG/map metadata logic"
+      ]
+    },
+    {
+      "repo": "shaarkys/com.xiaomi-miio",
+      "commit": "8174202b4a1f50249eff2896b69c02c5a4057efc",
+      "used_for": [
+        "direct local polling",
+        "start/stop/home/find mappings",
+        "error codes and resilience patterns"
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "topic": "room action naming",
+      "note": "python-miio/openHAB also expose a vacuum service action 2/3; v15 does not use it because node-xmihome and the dedicated Roidmi-EVE-Plus configuration provide an exact 14/1 segment command with mapId/segmentId payload."
+    },
+    {
+      "topic": "area-order",
+      "note": "disabled for device write because its internal string schema is not documented and prior inferred payload was rejected by the device."
+    }
+  ]
+}

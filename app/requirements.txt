@@ -1,0 +1,9 @@
+netifaces2==0.0.22
+python-miio==0.5.12
+requests>=2,<3
+pycryptodome>=3.20,<4
+Pillow>=10,<12
+vacuum-map-parser-base==0.1.5
+vacuum-map-parser-roidmi
+
+pystray>=0.19,<1

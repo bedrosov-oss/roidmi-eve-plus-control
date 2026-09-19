@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Mindsolo Voicepacks",
+    "kind": "Онлайн-каталог / установщик",
+    "compatibility": "Много моделей; совместимость v60 проверять на сайте",
+    "url": "https://vacuum.mindsolo.net/",
+    "direct_url": null,
+    "note": "Каталог и установка через браузер."
+  },
+  {
+    "name": "McDoS - Roidmi EVE Plus",
+    "kind": "Гайд + материалы",
+    "compatibility": "ROIDMI EVE Plus",
+    "url": "https://mc-dos.ru/language-packs-roidmi-eve-plus/",
+    "direct_url": null,
+    "note": "Инструкция и структура пакетов."
+  },
+  {
+    "name": "McDoS - оригинальная русская озвучка",
+    "kind": "ZIP-шаблон",
+    "compatibility": "ROIDMI EVE Plus",
+    "url": "https://mc-dos.ru/language-packs-roidmi-eve-plus/",
+    "direct_url": "https://mc-dos.ru/upload/roidmi/girl_ru_orig.zip",
+    "note": "Оригинальный русский шаблон."
+  },
+  {
+    "name": "McDoS - шаблон с подписями",
+    "kind": "ZIP-шаблон",
+    "compatibility": "ROIDMI EVE Plus",
+    "url": "https://mc-dos.ru/language-packs-roidmi-eve-plus/",
+    "direct_url": "https://mc-dos.ru/upload/roidmi/original_girl_ru_named.zip",
+    "note": "Фразы с понятными именами."
+  },
+  {
+    "name": "4PDA - Roidmi EVE Plus",
+    "kind": "Форум",
+    "compatibility": "ROIDMI EVE Plus",
+    "url": "https://4pda.to/forum/index.php?showtopic=1023628",
+    "direct_url": null,
+    "note": "Пользовательские материалы."
+  },
+  {
+    "name": "Звукограм",
+    "kind": "TTS",
+    "compatibility": "Создание MP3",
+    "url": "https://zvukogram.com/speech/",
+    "direct_url": null,
+    "note": "Синтез речи."
+  }
+]

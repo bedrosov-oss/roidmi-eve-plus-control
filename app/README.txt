@@ -1,0 +1,2 @@
+﻿Запуск: START_ONE_CLICK.cmd
+Инструкция: README_V21_5_GITHUB_AUTO_UPDATE_RU.txt

@@ -1,0 +1,84 @@
+{
+  "model": "roidmi.vacuum.v60",
+  "generated_for": "v20",
+  "capabilities": [
+    {
+      "feature": "Старт/стоп",
+      "support": "Да",
+      "miot": "2/1,2/2",
+      "note": ""
+    },
+    {
+      "feature": "На базу",
+      "support": "Да",
+      "miot": "3/1",
+      "note": ""
+    },
+    {
+      "feature": "Выборочная уборка комнат",
+      "support": "Да",
+      "miot": "14/1",
+      "note": "mapId + segmentId"
+    },
+    {
+      "feature": "Мощность",
+      "support": "Да",
+      "miot": "2/4",
+      "note": "0-4"
+    },
+    {
+      "feature": "Тип уборки",
+      "support": "Да",
+      "miot": "2/8",
+      "note": "0-2"
+    },
+    {
+      "feature": "Вода",
+      "support": "Да",
+      "miot": "8/11",
+      "note": "0-4"
+    },
+    {
+      "feature": "Маршрут",
+      "support": "Да",
+      "miot": "13/8",
+      "note": "Normal/Y/Repeat"
+    },
+    {
+      "feature": "Double clean",
+      "support": "Да",
+      "miot": "8/20",
+      "note": ""
+    },
+    {
+      "feature": "Carpet boost",
+      "support": "Да",
+      "miot": "8/9",
+      "note": ""
+    },
+    {
+      "feature": "Расписание",
+      "support": "Да",
+      "miot": "8/6 property",
+      "note": "fan/type/water/rooms per row"
+    },
+    {
+      "feature": "Native area custom",
+      "support": "Есть",
+      "miot": "13/10",
+      "note": "payload schema not confirmed"
+    },
+    {
+      "feature": "Area order",
+      "support": "Есть",
+      "miot": "13/11",
+      "note": "payload schema not confirmed"
+    },
+    {
+      "feature": "Голос",
+      "support": "Да",
+      "miot": "8/12",
+      "note": "current audio 8/26"
+    }
+  ]
+}
