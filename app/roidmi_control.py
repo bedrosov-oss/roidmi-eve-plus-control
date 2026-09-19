@@ -61,9 +61,9 @@ except Exception:
     Text = None
     RoidmiMapDataParser = None
 
-APP_TITLE = "ROIDMI EVE Plus Control v21.5 - GitHub Auto Update"
+APP_TITLE = "ROIDMI EVE Plus Control v21.6 - Auto Login + IP/Token Recovery"
 MODEL = "roidmi.vacuum.v60"
-CURRENT_VERSION = "21.5"
+CURRENT_VERSION = "21.6"
 GITHUB_REPOSITORY = "bedrosov-oss/roidmi-eve-plus-control"
 GITHUB_REPOSITORY_URL = f"https://github.com/{GITHUB_REPOSITORY}"
 GITHUB_MANIFEST_URL = (
@@ -1437,6 +1437,86 @@ class XiaomiCloudLite:
 
         return None
 
+    def find_device_by_model(self, model, preferred_country="auto", preferred_did=None):
+        """Find a Xiaomi device without already knowing its token."""
+        countries = self.COUNTRIES if preferred_country == "auto" else [preferred_country]
+        preferred_did = str(preferred_did or "").strip()
+
+        def normalize(country, d, owner=None):
+            return {
+                "country": country,
+                "user_id": d.get("uid") or owner,
+                "device_id": d.get("did"),
+                "model": d.get("model"),
+                "name": d.get("name"),
+                "token": d.get("token"),
+                "localip": d.get("localip") or d.get("local_ip") or d.get("ip"),
+                "mac": d.get("mac"),
+                "pid": d.get("pid", 0),
+            }
+
+        for country in countries:
+            try:
+                r = self.api(
+                    country, "/home/device_list",
+                    {"getVirtualModel": False, "getHuamiDevices": 0}
+                )
+                devices = (r.get("result", {}) or {}).get("list", []) or []
+                exact, fallback = [], []
+                for d in devices:
+                    if str(d.get("model") or "") != str(model):
+                        continue
+                    item = normalize(country, d)
+                    if preferred_did and str(item.get("device_id")) == preferred_did:
+                        exact.append(item)
+                    else:
+                        fallback.append(item)
+                if exact:
+                    return exact[0]
+                if fallback:
+                    return fallback[0]
+            except Exception:
+                pass
+
+        for country in countries:
+            try:
+                h = self.api(
+                    country, "/v2/homeroom/gethome",
+                    {
+                        "fg": True, "fetch_share": True, "fetch_share_dev": True,
+                        "limit": 300, "app_ver": 7
+                    }
+                )
+                result = h.get("result", {}) or {}
+                homes = (result.get("homelist") or []) + (result.get("share_home_list") or [])
+                exact, fallback = [], []
+                for home in homes:
+                    home_id = int(home["id"])
+                    owner = home["uid"]
+                    devs = self.api(
+                        country, "/v2/home/home_device_list",
+                        {
+                            "home_id": home_id, "home_owner": owner, "limit": 200,
+                            "get_split_device": True, "support_smart_home": True
+                        }
+                    )
+                    for d in (devs.get("result", {}) or {}).get("device_info", []) or []:
+                        if str(d.get("model") or "") != str(model):
+                            continue
+                        item = normalize(country, d, owner=owner)
+                        if preferred_did and str(item.get("device_id")) == preferred_did:
+                            exact.append(item)
+                        else:
+                            fallback.append(item)
+                if exact:
+                    return exact[0]
+                if fallback:
+                    return fallback[0]
+            except Exception:
+                pass
+
+        return None
+
     def firmware_info(self, country, did, pid=0):
         """Read Xiaomi firmware metadata without starting any upgrade."""
         result = {
@@ -1793,7 +1873,7 @@ class App(tk.Tk):
 
         if RoidmiVacuumMiot is None:
             self.after(400, self._show_dependency_error)
-        elif self.auto_config.get("auto_connect", False):
+        else:
             self.after(1800, self.safe_autostart)
 
     def _apply_1080p_window(self):
@@ -1878,15 +1958,33 @@ class App(tk.Tk):
             pass
 
     def safe_autostart(self):
-        """Run automatic connection only after the GUI is fully painted."""
+        """Attempt credential recovery automatically after GUI startup."""
         try:
             if os.environ.get("ROIDMI_NO_AUTOCONNECT") == "1":
                 self.statusbar_var.set(
                     "Диагностический запуск: автоподключение отключено."
                 )
                 return
-            if self.auto_config.get("auto_connect", False):
-                self.auto_connect_all()
+
+            has_cfg = bool(
+                self._valid_robot_token((self.auto_config or {}).get("token"))
+                or self._valid_ipv4((self.auto_config or {}).get("ip"))
+            )
+            has_cloud = bool(
+                self._read_cloud_session_file(SHARED_CLOUD_SESSION_PATH)
+                or self._read_cloud_session_file(CLOUD_SESSION_PATH)
+                or self._migrate_old_cloud_session()
+            )
+
+            if has_cfg or has_cloud:
+                self.discovery_status_var.set(
+                    "Автовход: восстановление IP/token и поиск ROIDMI..."
+                )
+                self.auto_connect_all(silent=True)
+            else:
+                self.discovery_status_var.set(
+                    "Автовход: сохранённый token/Xiaomi Cloud session пока не найден."
+                )
         except Exception:
             exc_type, exc_value, exc_tb = sys.exc_info()
             write_crash_report(
@@ -1894,10 +1992,11 @@ class App(tk.Tk):
             )
             try:
                 self.statusbar_var.set(
-                    "Автоподключение не выполнено. Можно подключиться вручную."
+                    "Автовход не выполнен. Можно подключиться вручную."
                 )
             except Exception:
                 pass
+
 
     def open_user_profile(self):
         """Open USER_PROFILE.json with the Windows default application.
@@ -1927,18 +2026,90 @@ class App(tk.Tk):
                     f"Не удалось открыть профиль:\n{e}"
                 )
 
-    def _load_auto_config(self):
-        if not AUTO_CONFIG_PATH.exists():
-            return {}
+    def _legacy_auto_config_candidates(self):
+        candidates = []
+        seen = set()
+
+        def add(path):
+            try:
+                path = Path(path)
+                key = str(path.resolve())
+            except Exception:
+                return
+            if key not in seen:
+                seen.add(key)
+                candidates.append(path)
+
+        add(AUTO_CONFIG_PATH)
+        add(ROOT / "AUTO_CONFIG.json")
+
         try:
-            obj = json.loads(AUTO_CONFIG_PATH.read_text(encoding="utf-8-sig"))
-            return obj if isinstance(obj, dict) else {}
-        except Exception as e:
-            self.after(300, lambda: messagebox.showwarning(
-                "AUTO_CONFIG.json",
-                f"Не удалось прочитать AUTO_CONFIG.json:\n{e}"
-            ))
-            return {}
+            matches = list(ROOT.parent.glob("ROIDMI_EVE_Plus_Control_Windows_v*/AUTO_CONFIG.json"))
+            matches.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
+            for p in matches:
+                add(p)
+        except Exception:
+            pass
+
+        home = Path.home()
+        for base in (home / "Desktop", home / "Downloads", home / "Documents"):
+            if not base.exists():
+                continue
+            try:
+                matches = list(base.glob("ROIDMI_EVE_Plus_Control_Windows_v*/AUTO_CONFIG.json"))
+                matches += list(base.glob("ROIDMI*/AUTO_CONFIG.json"))
+                matches.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
+                for p in matches[:30]:
+                    add(p)
+            except Exception:
+                pass
+
+        return candidates
+
+    @staticmethod
+    def _valid_robot_token(value):
+        token = str(value or "").strip().lower()
+        return len(token) == 32 and all(c in "0123456789abcdef" for c in token)
+
+    @staticmethod
+    def _valid_ipv4(value):
+        try:
+            ip = ipaddress.ip_address(str(value or "").strip())
+            return ip.version == 4
+        except Exception:
+            return False
+
+    def _load_auto_config(self):
+        for path in self._legacy_auto_config_candidates():
+            if not path.exists():
+                continue
+            try:
+                obj = json.loads(path.read_text(encoding="utf-8-sig"))
+            except Exception:
+                continue
+            if not isinstance(obj, dict):
+                continue
+
+            if path != AUTO_CONFIG_PATH and (
+                self._valid_robot_token(obj.get("token"))
+                or obj.get("xiaomi_username")
+            ):
+                try:
+                    current = load_json_file(AUTO_CONFIG_PATH, {})
+                    if not isinstance(current, dict):
+                        current = {}
+                    for key, value in obj.items():
+                        if value not in (None, "") and not current.get(key):
+                            current[key] = value
+                    current["auto_connect"] = True
+                    atomic_write_json(AUTO_CONFIG_PATH, current)
+                    obj = current
+                except Exception:
+                    pass
+            return obj
+
+        return {}
+
 
     def _apply_auto_config_to_ui(self):
         cfg = self.auto_config or {}
@@ -2227,23 +2398,39 @@ class App(tk.Tk):
             f"MiIO-устройства, ответившие на handshake: {', '.join(sorted(responsive)) or 'нет'}."
         )
 
-    def _save_discovered_vacuum_ip(self, ip):
+    def _save_connection_credentials(self, ip=None, token=None, cloud_device=None):
         try:
-            cfg = {}
-            if AUTO_CONFIG_PATH.exists():
-                cfg = json.loads(AUTO_CONFIG_PATH.read_text(encoding="utf-8-sig"))
-                if not isinstance(cfg, dict):
-                    cfg = {}
-            cfg["ip"] = str(ip)
+            cfg = load_json_file(AUTO_CONFIG_PATH, {})
+            if not isinstance(cfg, dict):
+                cfg = {}
+            if ip:
+                cfg["ip"] = str(ip)
+            if token and self._valid_robot_token(token):
+                cfg["token"] = str(token).strip().lower()
             cfg["model"] = MODEL
-            AUTO_CONFIG_PATH.write_text(
-                json.dumps(cfg, ensure_ascii=False, indent=2),
-                encoding="utf-8"
-            )
+            cfg["auto_connect"] = True
+            cfg["auto_apply_saved_profile"] = cfg.get("auto_apply_saved_profile", True)
+
+            if isinstance(cloud_device, dict):
+                if cloud_device.get("device_id") is not None:
+                    cfg["device_id"] = str(cloud_device.get("device_id"))
+                if cloud_device.get("country"):
+                    cfg["xiaomi_region"] = str(cloud_device.get("country"))
+                if cloud_device.get("mac"):
+                    cfg["mac"] = str(cloud_device.get("mac"))
+
+            atomic_write_json(AUTO_CONFIG_PATH, cfg)
             self.auto_config = cfg
         except Exception as e:
-            with (ROOT / "discovery.log").open("a", encoding="utf-8") as f:
-                f.write(datetime.now().isoformat() + f" SAVE_IP_ERROR {e}\n")
+            try:
+                with (LOG_DIR / "discovery.log").open("a", encoding="utf-8") as f:
+                    f.write(datetime.now().isoformat() + f" SAVE_CONNECTION_ERROR {e}\\n")
+            except Exception:
+                pass
+
+    def _save_discovered_vacuum_ip(self, ip):
+        self._save_connection_credentials(ip=ip)
+
 
     def discover_vacuum(self):
         try:
@@ -2301,35 +2488,149 @@ class App(tk.Tk):
         found["auto_found"] = True
         return found
 
-    def auto_connect_all(self):
-        """Connect and automatically recover a changed DHCP IP when necessary."""
+    def _recover_saved_connection_sync(self, ip_hint="", token_hint=""):
+        ip = str(ip_hint or "").strip()
+        token = str(token_hint or "").strip().lower()
+        source = []
+        cloud_device = None
+
+        if not self._valid_robot_token(token):
+            for path in self._legacy_auto_config_candidates():
+                if not path.exists():
+                    continue
+                try:
+                    cfg = json.loads(path.read_text(encoding="utf-8-sig"))
+                except Exception:
+                    continue
+                if not isinstance(cfg, dict):
+                    continue
+                candidate = str(cfg.get("token") or "").strip().lower()
+                if self._valid_robot_token(candidate):
+                    token = candidate
+                    source.append("saved-config-token")
+                    if not self._valid_ipv4(ip) and self._valid_ipv4(cfg.get("ip")):
+                        ip = str(cfg.get("ip")).strip()
+                    break
+
+        if not self._valid_robot_token(token):
+            session = (
+                self._read_cloud_session_file(SHARED_CLOUD_SESSION_PATH)
+                or self._read_cloud_session_file(CLOUD_SESSION_PATH)
+                or self._migrate_old_cloud_session()
+            )
+            if session:
+                username = str(session.get("username") or "")
+                client = XiaomiCloudLite(username, "")
+                if client.import_auth(session):
+                    cfg = load_json_file(AUTO_CONFIG_PATH, {})
+                    if not isinstance(cfg, dict):
+                        cfg = {}
+                    cloud_device = client.find_device_by_model(
+                        MODEL,
+                        preferred_country=str(cfg.get("xiaomi_region") or "auto"),
+                        preferred_did=cfg.get("device_id"),
+                    )
+                    if cloud_device:
+                        candidate = str(cloud_device.get("token") or "").strip().lower()
+                        if self._valid_robot_token(candidate):
+                            token = candidate
+                            source.append("xiaomi-cloud-token")
+                        cloud_ip = cloud_device.get("localip")
+                        if self._valid_ipv4(cloud_ip):
+                            ip = str(cloud_ip).strip()
+                            source.append("xiaomi-cloud-ip")
+
+        if not self._valid_robot_token(token):
+            raise RuntimeError(
+                "Token не найден в LocalAppData, старых версиях или действующей "
+                "Xiaomi Cloud сессии. По одному UDP-поиску token получить нельзя. "
+                "Нужен один успешный вход Xiaomi Cloud или старый AUTO_CONFIG."
+            )
+
+        if self._valid_ipv4(ip):
+            try:
+                result = self._connect_with_recovery(ip, token)
+                result["token"] = token
+                result["credential_source"] = source or ["ui/saved"]
+                result["cloud_device"] = cloud_device
+                return result
+            except Exception:
+                pass
+
+        found = self._discover_vacuum_sync(token, ip or None)
+        found["token"] = token
+        found["credential_source"] = source or ["lan-discovery"]
+        found["cloud_device"] = cloud_device
+        found["auto_found"] = True
+        return found
+
+    def auto_connect_all(self, silent=False):
+        """Recover IP/token automatically and connect."""
         if self.busy:
             return
-        try:
-            ip, token = self.validate_connection()
-        except Exception as e:
-            messagebox.showerror("Автовход", str(e))
-            return
+
+        ip_hint = self.ip_var.get().strip()
+        token_hint = self.token_var.get().strip().lower()
+
         def task():
-            return self._connect_with_recovery(ip, token)
+            return self._recover_saved_connection_sync(ip_hint, token_hint)
 
         def done(result):
             self.device = result["device"]
-            if result["ip"] != self.ip_var.get().strip():
-                self.ip_var.set(result["ip"])
-                self._save_discovered_vacuum_ip(result["ip"])
-            if result.get("auto_found"):
-                self.discovery_status_var.set(
-                    f"IP восстановлен автоматически: {result['ip']} ({result.get('method')})"
-                )
+            ip = result["ip"]
+            token = result.get("token") or token_hint
+            self.ip_var.set(ip)
+            self.token_var.set(token)
+            self._save_connection_credentials(
+                ip=ip, token=token, cloud_device=result.get("cloud_device")
+            )
+            src = ", ".join(result.get("credential_source") or [])
+            method = result.get("method") or (
+                "configured-ip" if not result.get("auto_found") else "auto"
+            )
+            self.discovery_status_var.set(
+                f"Автовход готов: {ip} | {method}" + (f" | {src}" if src else "")
+            )
             self.on_status(result["status"])
-            self.statusbar_var.set("Автовход: подключение выполнено.")
+            self.statusbar_var.set(
+                "Автовход: IP и token восстановлены, ROIDMI подключён."
+            )
             if self.auto_config.get("auto_apply_saved_profile", True):
                 self.after(150, self.auto_apply_saved_profile_silent)
             elif self.auto_config.get("auto_fetch_rooms", False):
                 self.after(250, self.fetch_rooms)
 
-        self.async_run(task, done, "Автовход: подключение / поиск ROIDMI...")
+        if not silent:
+            self.async_run(task, done, "Автовход: поиск IP / token / подключение...")
+            return
+
+        self.set_busy(True, "Автовход: поиск IP / token...")
+        future = self.executor.submit(task)
+
+        def finish(fut):
+            try:
+                result = fut.result()
+            except Exception as e:
+                msg = str(e)
+                def fail():
+                    self.set_busy(False)
+                    self.discovery_status_var.set(f"Автовход не выполнен: {msg}")
+                    self.statusbar_var.set(
+                        "Автовход: сохранённых данных недостаточно. "
+                        "Выполните один вход Xiaomi Cloud."
+                    )
+                try:
+                    self.after(0, fail)
+                except Exception:
+                    pass
+            else:
+                try:
+                    self.after(0, lambda result=result: self._async_success(result, done))
+                except Exception:
+                    pass
+
+        future.add_done_callback(finish)
+
 
     def _install_live_autosave_traces(self):
         """Bind UI variables to debounced writes to the actual robot."""
@@ -2763,7 +3064,7 @@ class App(tk.Tk):
 
 
     def _build_top(self):
-        box = ttk.LabelFrame(self, text="Подключение к ROIDMI EVE Plus", style="Section.TLabelframe")
+        box = ttk.LabelFrame(self, text="Подключение к ROIDMI EVE Plus - авто IP/token", style="Section.TLabelframe")
         box.pack(fill="x", padx=8, pady=(8, 4))
 
         ttk.Label(box, text="IP:").grid(row=0, column=0, padx=(8, 4), pady=5, sticky="e")
@@ -2792,7 +3093,7 @@ class App(tk.Tk):
 
         tools = ttk.Frame(box, style="Card.TFrame")
         tools.grid(row=1, column=0, columnspan=7, sticky="ew", padx=7, pady=(2, 4))
-        ttk.Button(tools, text="Автовход", command=self.auto_connect_all).pack(side="left", padx=3)
+        ttk.Button(tools, text="АВТОВХОД IP + TOKEN", command=self.auto_connect_all).pack(side="left", padx=3)
         ttk.Button(tools, text="Где взять token", command=lambda: webbrowser.open(TOKEN_EXTRACTOR_URL)).pack(side="left", padx=3)
         ttk.Button(tools, text="MIoT-спецификация", command=lambda: webbrowser.open(MIOT_SPEC_URL)).pack(side="left", padx=3)
         ttk.Label(tools, textvariable=self.ui_screen_var, style="Muted.TLabel").pack(side="right", padx=6)
