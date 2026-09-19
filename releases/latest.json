@@ -1,7 +1,7 @@
 {
-  "version": "21.5",
+  "version": "21.6",
   "url": "https://raw.githubusercontent.com/bedrosov-oss/roidmi-eve-plus-control/main/dist/ROIDMI_EVE_Plus_Control_Windows_latest.zip",
-  "sha256": "677b86f62cd5993e0355475bedc2f316f4e279ef52bcc942a644e9a02e80048a",
-  "published_at": "2026-09-19T07:13:46.654562+00:00",
-  "notes": "ROIDMI EVE Plus Control v21.5"
+  "sha256": "6b1ddc65481857a6db88a5a2be18c3543b34c5b7d8fc7389143b4159dea61377",
+  "published_at": "2026-09-19T07:29:48.644354+00:00",
+  "notes": "ROIDMI EVE Plus Control v21.6"
 }
